@@ -11,7 +11,7 @@ int auth_unix(rqstp,transp)
      SVCXPRT *transp;
 {
 
-
+return 0;
 }
 
 
@@ -21,17 +21,17 @@ int auth_unix(rqstp,transp)
  * 
  *
  ***********************************************************************/
-int ibCheckAuth(int ud,char *client)
+PRIVATE int ibCheckAuth(int ud,char *client)
 {
   int i,retval;
   char *hlist;
   char *host;
   char *match;
 
-  if( CONF(ud,networkdb) == NULL ){  
+  if( ibConfigs[ud].networkdb == NULL ){  
     return 0;
   } else
-    hlist = CONF(ud,networkdb);
+    hlist = ibConfigs[ud].networkdb;
 
   retval=0;
   while((host = strtok(hlist,":")) != NULL ) {

@@ -2,16 +2,13 @@
 
 #include <linux/fcntl.h>
 
-
 #define GIVE_UP(a) { osUnlockMutex(); DBGout(); return (a); }
-
-#define LINUX_STD_PARAM  struct inode* inode,struct file* filep
 
 int ib_opened=0;
 int ib_exclusive=0;
 
 
-ibopen(LINUX_STD_PARAM)
+IBLCL int ibopen(struct inode *inode, struct file *filep)
 {
 	DBGin("ibopen");
 
@@ -60,7 +57,7 @@ ibopen(LINUX_STD_PARAM)
 }
 
 
-void ibclose(LINUX_STD_PARAM)
+IBLCL int ibclose(struct inode *inode, struct file *file)
 {
 	DBGin("ibclose");
 
@@ -87,7 +84,7 @@ void ibclose(LINUX_STD_PARAM)
 }
 
 
-ibioctl(LINUX_STD_PARAM,unsigned int cmd, unsigned long arg)
+IBLCL int ibioctl(struct inode *inode, struct file *filep, unsigned int cmd, unsigned long arg)
 {
 	int	retval = OK;		/* assume everything OK for now */
         ibarg_t m_ibarg,*ibargp;
@@ -124,11 +121,7 @@ ibioctl(LINUX_STD_PARAM,unsigned int cmd, unsigned long arg)
 	}
 
 
-#ifdef LINUX2_2        
 	copy_from_user( (ibarg_t *) ibargp , (ibarg_t *) arg , sizeof(ibarg_t));
-#else
-	memcpy_fromfs( (ibarg_t *) ibargp , (ibarg_t *) arg , sizeof(ibarg_t));
-#endif
 
 	if( cmd == IBAPWAIT ){ 
           DBGprint(DBG_BRANCH,("IBAPWAIT called"));
@@ -137,11 +130,7 @@ ibioctl(LINUX_STD_PARAM,unsigned int cmd, unsigned long arg)
 	  ibargp->ib_ibsta = ibsta;
 	  ibargp->ib_iberr = iberr;
 	  ibargp->ib_ibcnt = ibcnt;
-#ifdef LINUX2_2        
    	  copy_to_user((ibarg_t *) arg, (ibarg_t *) ibargp , sizeof(ibarg_t));
-#else
-   	  memcpy_tofs((ibarg_t *) arg, (ibarg_t *) ibargp , sizeof(ibarg_t));
-#endif
 
 	  DBGout();
 	  return retval;
@@ -157,7 +146,7 @@ ibioctl(LINUX_STD_PARAM,unsigned int cmd, unsigned long arg)
  	  retval = verify_area(VERIFY_WRITE, ibargp->ib_buf, ibargp->ib_cnt);
  	  if (retval)
  	    GIVE_UP (retval);
- 	  
+
 	  /* Get a DMA buffer */
 	  bufsize = ibargp->ib_cnt;
 	  if ((buf = osGetDMABuffer( &bufsize )) == NULL) {
@@ -169,11 +158,7 @@ ibioctl(LINUX_STD_PARAM,unsigned int cmd, unsigned long arg)
 	  remain = ibargp->ib_cnt;
 	  do {
 		  ibrd( buf, (bufsize < remain) ? bufsize : remain );
-#ifdef LINUX2_2        
 		  copy_to_user( userbuf, buf, ibcnt );
-#else
-		  memcpy_tofs( userbuf, buf, ibcnt );
-#endif
 		  remain -= ibcnt;
 		  userbuf += ibcnt;
 	  } while (remain > 0 && ibcnt > 0 && !(ibsta & END));
@@ -202,11 +187,7 @@ ibioctl(LINUX_STD_PARAM,unsigned int cmd, unsigned long arg)
 	  userbuf = ibargp->ib_buf;
 	  remain = ibargp->ib_cnt;
 	  do {
-#ifdef LINUX2_2        
 		  copy_from_user( buf, userbuf, (bufsize < remain) ? bufsize : remain );
-#else
-		  memcpy_fromfs( buf, userbuf, (bufsize < remain) ? bufsize : remain );
-#endif
 		  ibwrt( buf, (bufsize < remain) ? bufsize : remain );
 		  remain -= ibcnt;
 		  userbuf += ibcnt;
@@ -235,11 +216,7 @@ ibioctl(LINUX_STD_PARAM,unsigned int cmd, unsigned long arg)
 	  userbuf = ibargp->ib_buf;
 	  remain = ibargp->ib_cnt;
 	  do {
-#ifdef LINUX2_2        
 		  copy_from_user( buf, userbuf, (bufsize < remain) ? bufsize : remain );
-#else
-		  memcpy_fromfs( buf, userbuf, (bufsize < remain) ? bufsize : remain );
-#endif
 		  ibcmd( buf, (bufsize < remain) ? bufsize : remain );
 		  remain -= ibcnt;
 		  userbuf += ibcnt;
@@ -262,11 +239,7 @@ ibioctl(LINUX_STD_PARAM,unsigned int cmd, unsigned long arg)
 	    GIVE_UP(retval);
 	  
 	  ibrpp(&c);
-#ifdef LINUX2_2        
 	  put_user( c, ibargp->ib_buf );
-#else
-	  put_fs_byte( c, ibargp->ib_buf );
-#endif
 	  break;
 
 	case IBONL:
@@ -330,11 +303,7 @@ ibioctl(LINUX_STD_PARAM,unsigned int cmd, unsigned long arg)
 	  }
 	  dvrsp(ibargp->ib_arg, &c);
 
-#ifdef LINUX2_2        
 	  put_user( c, ibargp->ib_buf );
-#else
-	  put_fs_byte( c, ibargp->ib_buf );
-#endif
 
 	  break;
         case IBAPRSP:
@@ -343,11 +312,7 @@ ibioctl(LINUX_STD_PARAM,unsigned int cmd, unsigned long arg)
 	    GIVE_UP(retval);
 	  }
 	  ibAPrsp(ibargp->ib_arg, &c);
-#ifdef LINUX2_2        
 	  put_user( c, ibargp->ib_buf );
-#else
-	  put_fs_byte( c, ibargp->ib_buf );
-#endif
 	  break;
 	case DVRD:
 
@@ -367,11 +332,7 @@ ibioctl(LINUX_STD_PARAM,unsigned int cmd, unsigned long arg)
 	  remain = ibargp->ib_cnt;
 	  do {
 		  dvrd( ibargp->ib_arg, buf, (bufsize < remain) ? bufsize : remain );
-#ifdef LINUX2_2        
 		  copy_to_user( userbuf, buf, ibcnt );
-#else
-		  memcpy_tofs( userbuf, buf, ibcnt );
-#endif
 		  remain -= ibcnt;
 		  userbuf += ibcnt;
 	  } while (remain > 0 && ibcnt > 0 && !(ibsta & (END|ERR|TIMO)));
@@ -399,11 +360,7 @@ ibioctl(LINUX_STD_PARAM,unsigned int cmd, unsigned long arg)
 	  userbuf = ibargp->ib_buf;
 	  remain = ibargp->ib_cnt;
 	  do {
-#ifdef LINUX2_2        
 		  copy_from_user( buf, userbuf, (bufsize < remain) ? bufsize : remain );
-#else
-		  memcpy_fromfs( buf, userbuf, (bufsize < remain) ? bufsize : remain );
-#endif
 		  dvwrt( ibargp->ib_arg, buf, (bufsize < remain) ? bufsize : remain );
 		  remain -= ibcnt;
 		  userbuf += ibcnt;
@@ -445,11 +402,7 @@ ibioctl(LINUX_STD_PARAM,unsigned int cmd, unsigned long arg)
 	ibargp->ib_ibsta = ibsta;
 	ibargp->ib_iberr = iberr;
 	ibargp->ib_ibcnt = ibcnt;
-#ifdef LINUX2_2        
 	copy_to_user((ibarg_t *) arg, (ibarg_t *) ibargp , sizeof(ibarg_t));
-#else
-	memcpy_tofs((ibarg_t *) arg, (ibarg_t *) ibargp , sizeof(ibarg_t));
-#endif
 
 	GIVE_UP(retval);
 }
@@ -458,15 +411,14 @@ ibioctl(LINUX_STD_PARAM,unsigned int cmd, unsigned long arg)
 
 /***********************************************************************/
 
-int ibVFSwrite( LINUX_STD_PARAM, char *buffer, int count)
+IBLCL int ibVFSwrite( struct file *filep, const char *buffer, size_t count, loff_t *offset)
   {
-    int minor = MINOR(inode->i_rdev);
+    int minor = MINOR(filep->f_dentry->d_inode->i_rdev);
     int retval = 0;
 	int	bufsize;
 	int	remain;
 	char 	*buf;
-	char 	*userbuf;
-	char 	c;
+	const char 	*userbuf;
 
 
     DBGin("ibVFSwrite");
@@ -489,11 +441,7 @@ int ibVFSwrite( LINUX_STD_PARAM, char *buffer, int count)
 	  userbuf = buffer;
 	  remain = count;
 	  do {
-#ifdef LINUX2_2        
 		  copy_from_user( buf, userbuf, (bufsize < remain) ? bufsize : remain );
-#else
-		  memcpy_fromfs( buf, userbuf, (bufsize < remain) ? bufsize : remain );
-#endif
 		  dvwrt( minor , buf, (bufsize < remain) ? bufsize : remain );
 		  remain -= ibcnt;
 		  userbuf += ibcnt;
@@ -510,15 +458,14 @@ int ibVFSwrite( LINUX_STD_PARAM, char *buffer, int count)
 
 /*----------------------------------------------------------------------*/
 
-int ibVFSread( LINUX_STD_PARAM, char *buffer, int count)
+IBLCL int ibVFSread(struct file *filep, char *buffer, size_t count, loff_t *offset)
   {
-    int minor = MINOR(inode->i_rdev);
+    int minor = MINOR(filep->f_dentry->d_inode->i_rdev);
     int retval = 0;
 	int	bufsize;
 	int	remain;
 	char 	*buf;
 	char 	*userbuf;
-	char 	c;
 
 
 
@@ -543,11 +490,7 @@ int ibVFSread( LINUX_STD_PARAM, char *buffer, int count)
 	  remain = count;
 	  do {
 		  dvrd( minor , buf, (bufsize < remain) ? bufsize : remain );
-#ifdef LINUX2_2        
 		  copy_to_user( userbuf, buf, ibcnt );
-#else
-		  memcpy_tofs( userbuf, buf, ibcnt );
-#endif
 		  remain -= ibcnt;
 		  userbuf += ibcnt;
 	  } while (remain > 0 && ibcnt > 0 && !(ibsta & END));

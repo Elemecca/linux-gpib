@@ -12,7 +12,7 @@
 #
 GPIB_HOME = `(cd ../.. ; pwd)`
 
-include make.config
+-include make.config
 
 #######################################################################
 # The switches for your GPIB library
@@ -32,9 +32,9 @@ SUBDIRS = $(EXTSUBDIRS)
 
 
 LIBS =  $(GPIBLIBS) -lfl -lm
-INCLUDES = -I. -I$(GPIB_HOME)/include 
+INCLUDES = -I. -I$(GPIB_HOME)/include -I/usr/include/tcl8.3 
 
-CFLAGS = -fpic $(INCLUDES) $(DEFINES)
+CFLAGS = -fpic $(INCLUDES) $(DEFINES) -Wall
 
 
 SRCS = ibCmds.c 
@@ -48,11 +48,11 @@ libgpib.so: $(OBJS)
 	$(CC) -shared $(OBJS) $(LIBS) -o $@
 
 clean: 
-	-rm *.o *.so make.config
+	rm -f *.o *.so make.config
 	set -e;for i in $(SUBDIRS); do make -C $$i clean; done
 
 realclean: 
-	-rm *.o ibsh
+	rm -f *.o ibsh
 	set -e;for i in $(SUBDIRS) ./modules; do make -C $$i clean; done
 
 install:

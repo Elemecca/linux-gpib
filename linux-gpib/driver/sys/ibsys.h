@@ -11,7 +11,7 @@
 #include <linux/major.h>
 #define __NO_VERSION__
 #include <linux/module.h>
-#include <linux/malloc.h>
+#include <linux/slab.h>
 #include <linux/mm.h>
 #include <linux/timer.h>
 
@@ -19,9 +19,7 @@
 #include <asm/segment.h>
 #include <asm/irq.h>
 #include <asm/dma.h>
-#ifdef LINUX2_2
 #include <asm/uaccess.h>
-#endif
 #include <asm/system.h>
 
 
@@ -50,7 +48,7 @@
 
 
 
-extern uint16      ibbase;	/* base addr of GPIB interface registers  */
+extern unsigned int      ibbase;	/* base addr of GPIB interface registers  */
 extern uint8       ibirq;	/* interrupt request line for GPIB (1-7)  */
 extern uint8       ibdma ;      /* DMA channel                            */
 

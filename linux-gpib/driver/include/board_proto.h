@@ -1,9 +1,9 @@
 /* Automatically created by mkproto.sh. DONT EDIT */
 /***** Public Functions ******/
 extern  void bdDMAAdjCnt(ibio_op_t *rwop);
-extern  bdPIOAdjCnt(ibio_op_t *rwop);
-extern  int bdSendAuxCmd(int cmd);
-extern  int bdSendAuxACmd(int cmd);
+extern  void bdPIOAdjCnt(ibio_op_t *rwop);
+extern  void bdSendAuxCmd(int cmd);
+extern  void bdSendAuxACmd(int cmd);
 extern  void bdcmd(ibio_op_t *cmdop);
 extern  int bdDMAwait(ibio_op_t *rwop, int noWait);
 extern  void bdDMAstart(ibio_op_t *rwop);
@@ -18,14 +18,13 @@ extern  uint8 bdGetDataByte(void);
 extern  uint8 bdGetCmdByte(void);
 extern  uint8 bdGetAdrStat(void);
 extern  uint8 bdCheckEOI(void);
-extern  uint8 bdSetEOS(int ebyte);
-extern  uint8 bdGetEOS(void);
+extern  void bdSetEOS(int ebyte);
 extern  void bdSetSPMode(int v);
 extern  void bdSetPAD(int v);
 extern  void bdSetSAD(int mySAD,int enable);
 extern  void bdwait(unsigned int mask);
-extern  int bdWaitIn(void);
+extern  uint8 bdWaitIn(void);
 extern  void bdWaitOut(void);
 extern  void bdWaitATN(void);
 extern  void bdDMAwrt(ibio_op_t *wrtop);
-extern  void bdPIOwrt( ibio_op_t *wrtop);
+extern  void bdPIOwrt(ibio_op_t *wrtop);

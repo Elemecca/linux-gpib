@@ -1,8 +1,8 @@
 #include <ibsys.h>
 
-struct semaphore osMutex = MUTEX;
+DECLARE_MUTEX(osMutex);
 
-void osLockMutex( void )
+IBLCL void osLockMutex( void )
 {
   DBGin("osLockMutex");
   DBGprint(DBG_BRANCH,("Locking Process %d ",current->pid));
@@ -10,7 +10,7 @@ void osLockMutex( void )
   DBGout();
 }
 
-void osUnlockMutex( void )
+IBLCL void osUnlockMutex( void )
 {
   DBGin("osUnlockMutex");
   DBGprint(DBG_BRANCH,("Unlocking Process %d ",current->pid));

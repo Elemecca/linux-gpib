@@ -9,7 +9,7 @@
 #include <linux/errno.h>
 #include <linux/major.h>
 #include <linux/module.h>
-#include <linux/malloc.h>
+#include <linux/slab.h>
 #include <linux/mm.h>
 #include <linux/timer.h>
 
@@ -20,13 +20,13 @@
 
 #define MAX_DEVICES 31
 
-struct semaphore AutoP_mutex = MUTEX;
+DECLARE_MUTEX(AutoP_mutex);
 
 void AP_Lock (void)
 {
   DBGin("AP_Lock");
   down(&AutoP_mutex);
-  DBGprint(DBG_DATA,("AutoP_mutex=%d",AutoP_mutex.count));
+  DBGprint(DBG_DATA,("AutoP_mutex=%d",atomic_read(&AutoP_mutex.count)));
   DBGout();
 }
 
@@ -34,13 +34,13 @@ void AP_UnLock (void)
 {
   DBGin("AP_UnLock");
   up(&AutoP_mutex);
-  DBGprint(DBG_DATA,("AutoP_mutex=%d",AutoP_mutex.count));
+  DBGprint(DBG_DATA,("AutoP_mutex=%d",atomic_read(&AutoP_mutex.count)));
   DBGout();
 }
 
 
 /*
- * The device entry in the Poll vector 
+ * The device entry in the Poll vector
  *
  */
 
@@ -64,12 +64,12 @@ struct AP_device AP_Vector[MAX_DEVICES];  /* The Poll Vector (only one entry per
  *
  */
 
-void AP_Init(void) 
+void AP_Init(void)
 {
-  int i; 
+  int i;
   DBGin("AP_Init");
   for(i=0;i<MAX_DEVICES;i++) {
-    AP_Vector[i].lock=MUTEX;
+    init_MUTEX(&AP_Vector[i].lock);
    /*(AP_Vector[i].lock).count = 1;*/
     AP_Vector[i].flags= 0;
     AP_Vector[i].spb  = 0;
@@ -85,7 +85,7 @@ void AP_LocalLock(int pad)
 {
   DBGin("AP_LocalLock");
   down(&(AP_Vector[pad].lock));
-  DBGprint(DBG_DATA,("Vector[%d].lock=%d",pad,(AP_Vector[pad].lock).count));
+  DBGprint(DBG_DATA,("Vector[%d].lock=%d",pad,atomic_read(&(AP_Vector[pad].lock).count)));
   DBGout();
 }
 
@@ -93,7 +93,7 @@ void AP_LocalUnLock(int pad)
 {
   DBGin("AP_LocalUnLock");
   up(&(AP_Vector[pad].lock));
-  DBGprint(DBG_DATA,("Vector[%d].lock=%d",pad,(AP_Vector[pad].lock).count));
+  DBGprint(DBG_DATA,("Vector[%d].lock=%d",pad,atomic_read(&(AP_Vector[pad].lock).count)));
   DBGout();
 }
 
@@ -104,10 +104,9 @@ void AP_LocalUnLock(int pad)
 
 int AP_virgin = 1;
 
-int ibAPWait(int pad)
+IBLCL int ibAPWait(int pad)
 {
   int i;
-  char tspb[2];
 
   DBGin("ibAPWait");
   pad &=0xff;
@@ -173,7 +172,7 @@ int ibAPWait(int pad)
  *
  */
 
-int ibAPrsp(int padsad, char *spb)
+IBLCL int ibAPrsp(int padsad, char *spb)
 {
         int pad = padsad & 0xff;
 
@@ -205,13 +204,13 @@ int ibAPrsp(int padsad, char *spb)
  *
  */
 
-int ibAPE(int pad, int v)
+IBLCL void ibAPE(int pad, int v)
 {
   DBGin("ibAPE");
 
   pad &= 0xff;
   DBGprint(DBG_DATA,("AP_POLL(%d)=%d",pad,v));
-  if(v){ 
+  if(v){
     AP_Vector[pad].flags |= AP_POLL;
   } else {
     AP_Vector[pad].flags &= ~AP_POLL;

@@ -1,8 +1,10 @@
 #include <ibsys.h>
+#include <board.h>
+
 extern uint8       CurHSMode;
 
 /*
- * There is a Problem with Linux Semaphores: 
+ * There is a Problem with Linux Semaphores:
  *      - enabling Interrupts
  *      - call to down()
  *
@@ -22,8 +24,6 @@ extern int ccrbits;
 
 extern uint8 ibirq;
 
-static int IRQ_mask;
-
 long serial=0L;
 
 #if USEINTS
@@ -32,12 +32,11 @@ long serial=0L;
  */
 void ibintr(int irq, struct pt_regs *registerp )
 {
-int s;
 
 /*printk("***IRQ %ld! st=0x%x \n",serial++,GPIBin(hs_status));*/
 #if DEBUG
 	if (dbgMask & DBG_INTR)
-	        printk("GPIB INTERRUPT! semaphore id = %d\n", espsemid.count);
+	        printk("GPIB INTERRUPT! semaphore id = %d\n", atomic_read(&espsemid.count));
 #endif
 
 #ifdef NIAT
@@ -88,24 +87,16 @@ int s;
 
 IBLCL void osWaitForInt( int imr3mask )
 {
-        struct wait_queue wait = {current, NULL}; /*@*/
+//	DECLARE_WAITQUEUE(wait, current);
 
 	DBGin("osWaitForInt");
-#ifdef LINUX2_2
         if (atomic_read(&espsemid.count) <=0) {
-#else
-	if (espsemid.count <= 0) {
-#endif
 	/*
 	 *	If semaphore not already available, enable
 	 *	requested interrupts and wait until it is...
 	 */
 
-#ifdef LINUX2_2
          sema_init( &espsemid, 1);
-#else
-	  espsemid.count = 1;
-#endif
           down(&espsemid); /* spurious interrups calling up() while irq's are enabled ? */
 
           /* now it's time to enable board interrupts */
@@ -120,13 +111,13 @@ IBLCL void osWaitForInt( int imr3mask )
 		*/
 #endif
 
-#ifdef NIAT    
-	        DBGprint(DBG_DATA, ("imr3mask=0x%x  ", imr3mask));		
+#ifdef NIAT
+	        DBGprint(DBG_DATA, ("imr3mask=0x%x  ", imr3mask));
                 GPIBout(imr3, imr3mask);
 #endif
 #ifdef NIPCII
-                DBGprint(DBG_DATA, ("imr3mask=0x%x  ", imr3mask));		
-		GPIBout(imr2, imr3mask); /* sorry */	        
+                DBGprint(DBG_DATA, ("imr3mask=0x%x  ", imr3mask));
+		GPIBout(imr2, imr3mask); /* sorry */
 #endif
 #ifdef HP82335
 #if 0
@@ -135,8 +126,8 @@ IBLCL void osWaitForInt( int imr3mask )
                 GPIBout(ccr, ccrbits);            /* re-enable interrupts if set */
                 DBGprint(DBG_DATA,("===>csr=0x%x",GPIBin(csr)));
 #endif
-                DBGprint(DBG_DATA, ("imr3mask=0x%x  ", imr3mask));		
-		GPIBout(imr1, imr3mask); /* sorry */	        
+                DBGprint(DBG_DATA, ("imr3mask=0x%x  ", imr3mask));
+		GPIBout(imr1, imr3mask); /* sorry */
 #endif
 		/* now push process to sleep */
 		down(&espsemid);
@@ -148,13 +139,8 @@ IBLCL void osWaitForInt( int imr3mask )
 #endif
 
 	}
-        else	{ 
-#ifdef LINUX2_2
-         sema_init( &espsemid, 0);
-#else
-	  espsemid.count = 0;
-#endif
-          espsemid.wait  = NULL;
+		else{
+		sema_init( &espsemid, 0);
 	}
 	DBGout();
 }

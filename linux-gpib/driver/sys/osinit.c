@@ -1,8 +1,8 @@
-
 #include <ibsys.h>
+#include <linux/version.h>
+#include <linux/module.h>
 
-
-
+MODULE_LICENSE("GPL");
 
 /* default debugging level */
 
@@ -92,8 +92,8 @@ IBLCL int osInit(void)
 {
 	int	s;
 extern  struct timer_list ibtimer_list;
-extern  void ibintr(int);
-
+extern  void ibintr(int irq, void *d, struct pt_regs *regs);
+	int isr_flags = 0;
 
 	DBGin("osInit");
 
@@ -101,7 +101,7 @@ extern  void ibintr(int);
 	s = TICKSPERSEC;
 	DBGprint(DBG_DATA, ("ClkRate=%d  ", s));
 	if (s != timeTable[0]) {
-		DBGprint(DBG_BRANCH, ("adjusting timeTable  ", s));
+		DBGprint(DBG_BRANCH, ("adjusting timeTable %d", s));
 		timeTable[ 0] = s;			/* (New TMFAC)  */
 		timeTable[ 1] = TM(s,10,1000000L);	/*  1: T10us    */
 		timeTable[ 2] = TM(s,30,1000000L);	/*  2: T30us    */
@@ -121,16 +121,12 @@ extern  void ibintr(int);
 		timeTable[16] = TM(s,300,1);		/* 16: T300s    */
 		timeTable[17] = TM(s,1000,1);		/* 17: T1000s   */
 	}
-	ibtimer_list.next = ibtimer_list.prev = NULL;
+	ibtimer_list.list.next = ibtimer_list.list.prev = NULL;
 #endif
 
 #if USEINTS
- #ifdef LINUX2_2
         sema_init( &espsemid, 0);
- #else
-	espsemid.count=0;
- #endif
-	DBGprint(DBG_DATA, ("espsemid=0x%x  ", espsemid.count));
+	DBGprint(DBG_DATA, ("espsemid=0x%x  ", atomic_read(&espsemid.count)));
 #endif
         /* avoid symbols to be exported (TB) */
 #if 0
@@ -139,11 +135,10 @@ extern  void ibintr(int);
 	/* register IRQ and DMA channel */
 
 #if USEINTS
-#ifdef LINUX2_0
-	if( request_irq(ibirq,ibintr,SA_INTERRUPT,"gpib",NULL)){
-#else
-	if( request_irq(ibirq,ibintr,0,"gpib")){
+#if defined(CBI_PCI) || defined(MODBUS_PCI) || 	defined(INES_PCI)  
+	isr_flags |= SA_SHIRQ;
 #endif
+	if( request_irq(ibirq, ibintr, isr_flags, "gpib", NULL)){
 	  printk("can't request IRQ %d\n",ibirq);
           DBGout();
 	  return(0);
@@ -158,11 +153,7 @@ extern  void ibintr(int);
 	if( request_dma( ibdma, "gpib" ) ){
 	  printk("can't request DMA %d\n",ibdma );
 #if USEINTS
-#ifdef LINUX2_0
 	free_irq(ibirq, NULL);
-#else
-	free_irq(ibirq);
-#endif
 #endif
           DBGout();
 	  return(0);
@@ -181,11 +172,7 @@ IBLCL void osReset(void)
         if( pgmstat & PS_SYSRDY ){
 
 #if USEINTS                /*release ressources */
-#ifdef LINUX2_0
 	free_irq(ibirq, NULL);
-#else
-	free_irq(ibirq);
-#endif
 #endif
 #if DMAOP
 	free_dma(ibdma);
@@ -204,22 +191,17 @@ IBLCL void osReset(void)
 
 ****************************************************************************************/
 
-extern int  ibioctl    (struct inode *, struct file *, unsigned int, unsigned long);
-extern int  ibopen     (struct inode *, struct file *);
-extern void ibclose    (struct inode *, struct file *);
-extern int  ibVFSread  (struct inode *, struct file *, char *, int );
-extern int  ibVFSwrite (struct inode *, struct file *, char *, int );
-
 struct file_operations ib_fops = {
-  NULL,               /* seek */
-  ibVFSread,          /* read */
-  ibVFSwrite,         /* write */
-  NULL,               /* readdir */
-  NULL,               /* select */
-  ibioctl,            /* ioctl */
-  NULL,               /* mmap */
-  ibopen,             /* open */
-  ibclose             /* release */
+  owner: THIS_MODULE,
+  llseek: NULL,
+  read: ibVFSread,
+  write: ibVFSwrite,
+  readdir: NULL,
+  ioctl: ibioctl,
+  mmap: NULL,
+  open: ibopen,
+  flush: NULL,
+  release: ibclose,
 };
 
 
@@ -233,9 +215,6 @@ int ibmajor = IBMAJOR;   /* major number for dynamic configuration */
 int init_module(void)
 {
 
-        char signature=0;
-        extern char kernel_version[];
-
 #if DEBUG
 	if(dbgMask != 0 )
          	dbgMask |= DBG_1PPL;
@@ -247,7 +226,7 @@ int init_module(void)
 #endif
 #ifdef INES_PCMCIA
    pcmcia_init_module();
-#endif  
+#endif
 
 
 #ifdef CBI_PCI
@@ -275,7 +254,7 @@ int init_module(void)
 #if DEBUG
 	printk("-- DebugMask = 0x%x\n",dbgMask);
 #endif
-	printk("-- Kernel Release %s\n",kernel_version);
+	printk("-- Kernel Release %s\n", UTS_RELEASE);
 
   	DBGin("ibinstall");
 	
@@ -316,6 +295,9 @@ void cleanup_module(void)
 #endif    
 #ifdef MODBUS_PCI
   bdPCIDetach();
+#endif
+#ifdef HP82335
+	bdDetach();
 #endif
 
   DBGout();

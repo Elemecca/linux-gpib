@@ -5,8 +5,9 @@
 #include <time.h>
 #include <stdio.h>
 #include <stdarg.h>
+#include <string.h>
 
-FILE *errp = stderr;
+FILE* errp=NULL;
 
 
 PRIVATE void ibOpenErrlog(char *name)
@@ -21,7 +22,7 @@ PRIVATE void ibOpenErrlog(char *name)
 }
 
 
-PRIVATE int ibCloseErrlog(void)
+PRIVATE void ibCloseErrlog(void)
 {
   if( errp != stderr )
     fclose(errp);
@@ -87,7 +88,7 @@ int ibPutMsg(char *msg)
 }
 #endif
 
-PRIVATE int ibPutMsg (char *format,...) 
+PRIVATE void ibPutMsg (char *format,...) 
 {
 
 va_list ap;
@@ -107,7 +108,7 @@ va_list ap;
 }
 
 
-PRIVATE int ibPutErrlog(int ud,char *routine)
+PRIVATE void ibPutErrlog(int ud,char *routine)
 {
 
 time_t tm;
@@ -117,7 +118,7 @@ char strtime[60];
     time(&tm);
     strftime(strtime,59,"%c",gmtime(&tm));
 
-    if(ud>=0) fprintf(errp,"\n %-15s:[%s](%s)< ",routine,strtime,CONF(ud,name));
+    if(ud>=0) fprintf(errp,"\n %-15s:[%s](%s)< ",routine,strtime, ibConfigs[ud].name);
     else      fprintf(errp,"\n %-15s:[%s](-)< " ,routine,strtime);
 
     if ( ibsta & ERR )  fprintf(errp," ERR");

@@ -7,6 +7,8 @@
 #include "rgpibP.h"
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>
 #include <netdb.h>
 
 /* 
@@ -27,7 +29,7 @@ r_handle_t RgpibHandles[MAXHANDLES];
 int Rhandle_cnt = 0;
 
 /*----------------------------------------------------------------------*/
-int ibRemoteFunc (int handle, int code, int arg, char *buf, int cnt)
+PRIVATE int ibRemoteFunc (int handle, int code, int arg, char *buf, int cnt)
 {
   gpib_request request, *result;
   CLIENT *cl;
@@ -78,7 +80,8 @@ static char  hostdomain[MAXNETNAMELEN],
 static int   ibfind_remote_called = 0;
 
 /*----------------------------------------------------------------------*/
-int ibFindRemote ( char *server, char *device ){
+PRIVATE int ibFindRemote ( char *server, char *device )
+{
 int handle,*ud;
 
 static struct gpib_request req;
@@ -166,11 +169,13 @@ CLIENT *ibGetClient(int handle){
    return ( RgpibHandles[(handle & ~UD_REMOTE)].r_client );
 }
 
-int ibGetUd(int handle){
+PRIVATE int ibGetUd(int handle)
+{
     return ( RgpibHandles[(handle & ~UD_REMOTE)].r_ud);
 }
 /*----------------------------------------------------------------------*/
-int ibCreateClientStub(char *server){
+PRIVATE int ibCreateClientStub(char *server)
+{
 
 CLIENT *cl;
 
@@ -203,12 +208,12 @@ char *ibGetNetDB(int ud)
   if( ud & UD_REMOTE ){ 
     return NULL;
   }
-  return (char *)CONF(ud,networkdb);
+  return ibConfigs[ud].networkdb;
 
 }
 /*----------------------------------------------------------------------*/
 
-int ibCleanupRemote(){
+void ibCleanupRemote(){
   CLIENT *cl;
   int i;
   for( i=0; i< Rhandle_cnt; i++)

@@ -13,7 +13,7 @@ BINDIR = /usr/local/bin
 LIBS =  -L../lib -lgpib -lfl
 INCLUDES = -I. -I../include  
 
-CFLAGS = $(INCLUDES) $(DEFINES)
+CFLAGS = $(INCLUDES) $(DEFINES) -Wall -O2
 
 
 ######################################################################
@@ -33,10 +33,10 @@ ibchk: $(OBJS) ../lib/libgpib.a
 DUMP_OBJS = ibdump.o ibDevMan.o
 
 ibdump: $(DUMP_OBJS) ../lib/libgpib.a
-	$(CC) -o ibdump $(CFLAGS) $(DUMP_OBJS) $(LIBS) 
+	$(CC) -o ibdump $(CFLAGS) $(INCLUDES) $(DUMP_OBJS) $(LIBS) 
 
 clean: 
-	-rm *.o ibchk
+	rm -f *.o ibchk
 
 rcsput:
 	ci -u $(SRCS) *.h

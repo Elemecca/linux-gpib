@@ -1,21 +1,20 @@
 #include <ibsys.h>
+#include <board.h>
 
 #if DMAOP
 /*
  * Start a DMA operation and wait on its completion.
  */
-int osDoDMA(ibio_op_t *rwop)
+
+IBLCL int osDoDMA(ibio_op_t *rwop)
 {
 	int		resid;		/* residual transfer count */
-	int		cnt;		/* word transfer count */
-	char		lsb, msb, page;	/* physical address pieces */
-
 
 	DBGin("osDoDMA");
 
 	rwop->io_pbuf = (uint32) rwop->io_vbuf;
 
-	DBGprint(DBG_DATA, ("pbuf=0x%x cnt=%d  ", rwop->io_pbuf, rwop->io_cnt));
+	DBGprint(DBG_DATA, ("pbuf=0x%x cnt=%d  ", (unsigned int)rwop->io_pbuf, rwop->io_cnt));
 
 
 	/* program dma controller */
